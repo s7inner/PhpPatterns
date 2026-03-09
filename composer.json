@@ -1,0 +1,22 @@
+{
+    "name": "php-patterns/php-patterns",
+    "description": "Design Patterns in PHP",
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "DesignPatterns\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "DesignPatterns\\": ""
+        }
+    }
+}
