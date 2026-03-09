@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DesignPatterns\Singleton\Tests;
+namespace DesignPatterns\Creational\Singleton\Tests;
 
-use DesignPatterns\Singleton\Singleton;
+use DesignPatterns\Creational\Singleton\Singleton;
 use PHPUnit\Framework\TestCase;
 
 class SingletonTest extends TestCase
