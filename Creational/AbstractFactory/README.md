@@ -92,7 +92,26 @@ interface FurnitureFactory
 }
 ```
 
-**3. Concrete products** - one set per style (CasualChair, CasualSofa, CasualCoffeeTable, etc.)
+**3. Concrete products** - one set per style. Example for Casual:
+
+```php
+class CasualChair implements Chair
+{
+    public function sitOn(): string { return 'Sitting on a casual chair'; }
+}
+
+class CasualSofa implements Sofa
+{
+    public function sitOn(): string { return 'Sitting on a casual sofa'; }
+}
+
+class CasualCoffeeTable implements CoffeeTable
+{
+    public function putOn(): string { return 'Put something on a casual coffee table'; }
+}
+```
+
+Same structure for Victorian (VictorianChair, VictorianSofa, VictorianCoffeeTable) and Modern.
 
 **4. Concrete factories** - each returns products from its family (in `Factories/`):
 
