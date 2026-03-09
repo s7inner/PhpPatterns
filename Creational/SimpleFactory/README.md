@@ -1,5 +1,11 @@
 # Simple Factory
 
+*Creating objects by parameter without exposing the instantiation logic to the client.*
+
+**Client* - the code that uses the factory (the part of the system that calls `$factory->create(...)`).
+
+Examples: `CheckoutController` and `OrderService` are clients of `PaymentFactory`.
+
 ## What This Pattern Is For
 
 ### The Problem
