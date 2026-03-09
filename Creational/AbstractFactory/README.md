@@ -45,10 +45,10 @@ Each factory produces a **complete family** of compatible products. The client p
 ### Real-World Examples
 
 **UI theme switching (Dark/Light)**  
-`DarkThemeFactory` creates DarkButton, DarkInput, DarkModal; `LightThemeFactory` creates LightButton, LightInput, LightModal. User selects theme once — all components match. No mixing DarkButton with LightInput.
+`DarkThemeFactory` creates DarkButton, DarkInput, DarkModal; `LightThemeFactory` creates LightButton, LightInput, LightModal. User selects theme once - all components match. No mixing DarkButton with LightInput.
 
 **Database drivers**  
-`MySQLFactory` creates MySQLConnection, MySQLQueryBuilder, MySQLResultSet; `PostgresFactory` does the same for PostgreSQL. The application uses one factory per DB — all parts stay compatible.
+`MySQLFactory` creates MySQLConnection, MySQLQueryBuilder, MySQLResultSet; `PostgresFactory` does the same for PostgreSQL. The application uses one factory per DB - all parts stay compatible.
 
 **Notification channels (Production/Sandbox)**  
 `ProductionNotificationFactory` creates real EmailSender, SmsSender; `SandboxNotificationFactory` creates mocks or test implementations. Same client code works in both environments.
