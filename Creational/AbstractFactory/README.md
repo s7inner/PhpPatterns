@@ -42,12 +42,19 @@ Each factory produces a **complete family** of compatible products. The client p
 | Duplicated creation logic | Each factory encapsulates its family |
 | Adding new family = edit many files | Add new factory class, client code unchanged |
 
-### When to Use
+### Real-World Examples
 
-- You need to create **families of related objects** (Chair + Sofa + Table, Button + Checkbox, etc.)
-- Products must be **compatible** - no mixing Light Button with Dark Checkbox
-- You want to **switch entire sets** (theme, platform, style) without changing client code
-- You need to add new families (new theme) without touching existing code
+**UI theme switching (Dark/Light)**  
+`DarkThemeFactory` creates DarkButton, DarkInput, DarkModal; `LightThemeFactory` creates LightButton, LightInput, LightModal. User selects theme once — all components match. No mixing DarkButton with LightInput.
+
+**Database drivers**  
+`MySQLFactory` creates MySQLConnection, MySQLQueryBuilder, MySQLResultSet; `PostgresFactory` does the same for PostgreSQL. The application uses one factory per DB — all parts stay compatible.
+
+**Notification channels (Production/Sandbox)**  
+`ProductionNotificationFactory` creates real EmailSender, SmsSender; `SandboxNotificationFactory` creates mocks or test implementations. Same client code works in both environments.
+
+**Cross-platform file writing (Unix/Windows)**  
+`UnixWriterFactory` returns UnixCsvWriter (`\n`) and UnixJsonWriter; `WinWriterFactory` returns WinCsvWriter (`\r\n`) and WinJsonWriter. Build pipelines use one factory so all writers share the same line endings. ([DesignPatternsPHP](https://designpatternsphp.readthedocs.io/en/latest/Creational/AbstractFactory/README.html))
 
 ---
 
@@ -101,20 +108,25 @@ class VictorianFurnitureFactory implements FurnitureFactory { ... }
 class ModernFurnitureFactory implements FurnitureFactory { ... }
 ```
 
-**5. Usage:**
+**5. Client code** - `RoomFurnisher` works only with the factory interface. No `if`/`switch` on style:
 
 ```php
-function furnishRoom(FurnitureFactory $factory): void
+class RoomFurnisher
 {
-    $chair = $factory->createChair();
-    $sofa = $factory->createSofa();
-    $table = $factory->createCoffeeTable();
-    // All from the same style - guaranteed compatible
+    public static function furnishRoom(FurnitureFactory $factory): array
+    {
+        return [
+            'chair' => $factory->createChair(),
+            'sofa' => $factory->createSofa(),
+            'table' => $factory->createCoffeeTable(),
+        ];
+    }
 }
 
-furnishRoom(new CasualFurnitureFactory());   // Casual room
-furnishRoom(new VictorianFurnitureFactory()); // Victorian room
-furnishRoom(new ModernFurnitureFactory());    // Modern room
+// Caller chooses style by passing the factory. RoomFurnisher never knows Casual/Victorian/Modern.
+$casualRoom = RoomFurnisher::furnishRoom(new CasualFurnitureFactory());
+$victorianRoom = RoomFurnisher::furnishRoom(new VictorianFurnitureFactory());
+$modernRoom = RoomFurnisher::furnishRoom(new ModernFurnitureFactory());
 ```
 
-The client works only with `FurnitureFactory`. To change style, pass a different factory - no `if`/`switch` in client code.
+The client (`RoomFurnisher`) has zero style-specific logic. To change style, pass a different factory.

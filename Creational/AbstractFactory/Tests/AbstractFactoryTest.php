@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DesignPatterns\Creational\AbstractFactory\Tests;
 
 use DesignPatterns\Creational\AbstractFactory\Factories\CasualFurnitureFactory;
+use DesignPatterns\Creational\AbstractFactory\RoomFurnisher;
 use DesignPatterns\Creational\AbstractFactory\Factories\ModernFurnitureFactory;
 use DesignPatterns\Creational\AbstractFactory\Factories\VictorianFurnitureFactory;
 use DesignPatterns\Creational\AbstractFactory\Interfaces\Chair;
@@ -72,5 +73,23 @@ class AbstractFactoryTest extends TestCase
         $this->assertInstanceOf(ModernCoffeeTable::class, $table);
 
         $this->assertStringContainsString('modern', $chair->sitOn());
+    }
+
+    public function testFurnishRoomReturnsMatchingFamily(): void
+    {
+        $casualRoom = RoomFurnisher::furnishRoom(new CasualFurnitureFactory());
+        $this->assertInstanceOf(CasualChair::class, $casualRoom['chair']);
+        $this->assertInstanceOf(CasualSofa::class, $casualRoom['sofa']);
+        $this->assertInstanceOf(CasualCoffeeTable::class, $casualRoom['table']);
+
+        $victorianRoom = RoomFurnisher::furnishRoom(new VictorianFurnitureFactory());
+        $this->assertInstanceOf(VictorianChair::class, $victorianRoom['chair']);
+        $this->assertInstanceOf(VictorianSofa::class, $victorianRoom['sofa']);
+        $this->assertInstanceOf(VictorianCoffeeTable::class, $victorianRoom['table']);
+
+        $modernRoom = RoomFurnisher::furnishRoom(new ModernFurnitureFactory());
+        $this->assertInstanceOf(ModernChair::class, $modernRoom['chair']);
+        $this->assertInstanceOf(ModernSofa::class, $modernRoom['sofa']);
+        $this->assertInstanceOf(ModernCoffeeTable::class, $modernRoom['table']);
     }
 }

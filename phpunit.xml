@@ -5,7 +5,7 @@
          colors="true">
     <testsuites>
         <testsuite name="Design Patterns">
-            <directory>./*/Tests</directory>
+            <directory>./Creational</directory>
         </testsuite>
     </testsuites>
 </phpunit>
