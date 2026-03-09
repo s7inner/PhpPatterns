@@ -1,4 +1,5 @@
 # Creational
 
-- [Singleton](./Singleton/)
+- [AbstractFactory](./AbstractFactory/)
 - [SimpleFactory](./SimpleFactory/)
+- [Singleton](./Singleton/)

@@ -1,5 +1,7 @@
 # Patterns
+
 ## Creational
 
-- [Singleton](./Creational/Singleton/)
+- [AbstractFactory](./Creational/AbstractFactory/)
 - [SimpleFactory](./Creational/SimpleFactory/)
+- [Singleton](./Creational/Singleton/)
