@@ -54,7 +54,7 @@ Each factory produces a **complete family** of compatible products. The client p
 `ProductionNotificationFactory` creates real EmailSender, SmsSender; `SandboxNotificationFactory` creates mocks or test implementations. Same client code works in both environments.
 
 **Cross-platform file writing (Unix/Windows)**  
-`UnixWriterFactory` returns UnixCsvWriter (`\n`) and UnixJsonWriter; `WinWriterFactory` returns WinCsvWriter (`\r\n`) and WinJsonWriter. Build pipelines use one factory so all writers share the same line endings. ([DesignPatternsPHP](https://designpatternsphp.readthedocs.io/en/latest/Creational/AbstractFactory/README.html))
+`UnixWriterFactory` returns UnixCsvWriter (`\n`) and UnixJsonWriter; `WinWriterFactory` returns WinCsvWriter (`\r\n`) and WinJsonWriter. Build pipelines use one factory so all writers share the same line endings.
 
 ---
 
