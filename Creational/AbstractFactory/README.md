@@ -2,6 +2,8 @@
 
 ## What This Pattern Is For
 
+*Creating families of related objects*
+
 ### The Problem
 
 You need to create **multiple related objects** that must work together as a consistent set. Without the pattern:
