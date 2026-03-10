@@ -73,6 +73,14 @@ flowchart LR
     SF -->|paypal| PP[PayPal]
 ```
 
+Client usage:
+
+```php
+$factory = new PaymentFactory();
+$payment = $factory->create('paypal');
+$payment->pay(150.00);
+```
+
 ### Factory Method
 
 ```mermaid
@@ -82,6 +90,15 @@ PF --> CCF[CreditCardFactory]
 PF --> PPF[PayPalFactory]
 CCF --> CC[CreditCard]
 PPF --> PP[PayPal]
+```
+
+Client usage:
+
+```php
+/** @var PaymentFactory $factory */
+$factory = new PayPalFactory();
+$payment = $factory->createPayment();
+$payment->pay(150.00);
 ```
 
 ### Abstract Factory
@@ -96,4 +113,12 @@ flowchart LR
     CF --> CCH[CasualChair]
     CF --> CS[CasualSofa]
     CF --> CCT[CasualCoffeeTable]
+```
+
+Client usage:
+
+```php
+/** @var FurnitureFactory $factory */
+$factory = new ModernFurnitureFactory();
+$room = RoomFurnisher::furnishRoom($factory);
 ```
