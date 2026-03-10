@@ -1,6 +1,5 @@
 # Creational
 
-- [AbstractFactory](./AbstractFactory/)
-- [FactoryMethod](./FactoryMethod/)
-- [SimpleFactory](./SimpleFactory/)
+- [Builder](./Builder/)
+- [Factories](./Factories/)
 - [Singleton](./Singleton/)

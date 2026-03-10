@@ -2,7 +2,6 @@
 
 ## Creational
 
-- [AbstractFactory](./Creational/AbstractFactory/)
-- [FactoryMethod](./Creational/FactoryMethod/)
-- [SimpleFactory](./Creational/SimpleFactory/)
+- [Builder](./Creational/Builder/)
+- [Factories](./Creational/Factories/)
 - [Singleton](./Creational/Singleton/)
