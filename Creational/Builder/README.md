@@ -96,6 +96,20 @@ $report = $director->buildMonthlyPerformanceReport(
 );
 ```
 
+### SOLID - D (Dependency Inversion Principle)
+
+DIP states: *High-level modules should not depend on low-level modules. Both should depend on abstractions.*
+
+In other words, high-level code should depend on abstractions, not on concrete implementations.
+
+Here:
+
+- **Director** - high-level module (defines the "recipe" for building).
+- **ReportBuilder** (concrete class) - low-level module (actual implementation).
+- **ReportBuilder** (interface) - abstraction.
+
+Instead of Director depending on the concrete `ReportBuilder` class, it depends on the `ReportBuilder` interface. So when you add or change builder implementations (e.g. `CachedReportBuilder`, `ValidatedReportBuilder`), you do not need to change Director - it works with the abstraction.
+
 ---
 
 ## When to Use
