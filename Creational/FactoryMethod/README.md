@@ -8,6 +8,10 @@
 
 With Simple Factory, adding a new payment type requires modifying the factory (another `case` in the switch). This violates Open/Closed Principle.
 
+**Open/Closed Principle** - *Software entities (classes, modules, functions, etc.) should be open for extension, but closed for modification.*
+
+You cannot keep editing `create()` in `PaymentFactory` - **Closed for modification**. For new functionality, create new classes (`CreditCardFactory`, `PayPalFactory`, `StripeFactory`) - **Open for extension**.
+
 ```php
 // Simple Factory - add Stripe = edit this class
 class PaymentFactory {
