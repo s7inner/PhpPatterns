@@ -128,3 +128,45 @@ $payment->pay(150.00);
 ```
 
 The client works only with `PaymentFactory`. To add Stripe, create `StripeFactory` - no changes to `CreditCardFactory`, `PayPalFactory`, or client.
+
+---
+
+## Laravel: Match in Service Provider (Most Typical in Production)
+
+In real Laravel projects, the factory selection based on config is usually done in a Service Provider. The switch/match runs **once at the composition root**; the client receives the factory through DI and never sees the switch.
+
+**1. Bind the factory in a Service Provider:**
+
+```php
+// AppServiceProvider.php or PaymentServiceProvider.php
+public function register(): void
+{
+    $this->app->bind(PaymentFactory::class, function () {
+        return match (config('payment.default')) {
+            'card' => new CreditCardFactory(),
+            'paypal' => new PayPalFactory(),
+            'stripe' => new StripeFactory(),
+            default => throw new InvalidArgumentException('Unknown payment provider'),
+        };
+    });
+}
+```
+
+**2. CheckoutService receives the factory via DI:**
+
+```php
+class CheckoutService
+{
+    public function __construct(
+        private PaymentFactory $factory
+    ) {}
+
+    public function checkout(float $amount): bool
+    {
+        $payment = $this->factory->createPayment();
+        return $payment->pay($amount);
+    }
+}
+```
+
+The client (`CheckoutService`) is unaware of the config or the match. It only depends on `PaymentFactory`. The switch lives in one place - the composition root - and the client stays clean.
