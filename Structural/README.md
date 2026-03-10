@@ -1,0 +1,3 @@
+# Structural
+
+- [Adapter](./Adapter/)
