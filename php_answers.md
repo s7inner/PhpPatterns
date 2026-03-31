@@ -300,60 +300,9 @@ class Logger
 OWASP — спільнота, яка написала best practices, щоб уникнули уразливостей для сайтів.
 
 Для чого він:
-- дає зрозумілий список найчастіших вразливостей;
+- дає зрозумілий список найчастіших вразливостей (sql інєкція й інші...);
 - показує, як їх перевіряти і як виправляти;
 - дає стандарти безпеки, щоб команда говорила "однією мовою".
-
-OWASP checklist для PHP/Laravel (практичний мінімум):
-
-1) SQL Injection
-- тільки prepared statements / ORM;
-- ніколи не збирати SQL конкатенацією з user input.
-
-2) XSS
-- екранування виводу (`{{ }}` у Blade за замовчуванням);
-- не вставляти сирий HTML без суворої санітизації;
-- додати CSP.
-
-3) CSRF
-- для state-changing запитів використовувати CSRF token;
-- не вимикати CSRF middleware без реальної причини.
-
-4) Authentication
-- сильні хеші паролів (`password_hash`, у Laravel вже є `bcrypt/argon2`);
-- MFA для адмінів;
-- ліміт спроб логіну (rate limit).
-
-5) Authorization (Broken Access Control)
-- перевіряти доступ на сервері для кожної дії;
-- використовувати Policies/Gates;
-- не довіряти ID з фронта без перевірки власника/ролі.
-
-6) Session & Cookies
-- `Secure`, `HttpOnly`, `SameSite`;
-- тільки HTTPS;
-- регенерація `session_id` після логіну.
-
-7) Secrets & Config
-- ніяких секретів у git;
-- `.env` тільки на сервері;
-- ротація ключів/токенів при витоку.
-
-8) File Upload
-- whitelist MIME/розширень;
-- перейменування файлів, зберігання поза `public` (або через контрольований доступ);
-- перевірка розміру, сканування за потреби.
-
-9) Dependency Security
-- оновлювати залежності;
-- регулярно запускати `composer audit`;
-- слідкувати за CVE у пакетах.
-
-10) Logging & Monitoring
-- логувати security-події (логін, невдалі спроби, 403, зміни ролей);
-- не логувати паролі/токени/персональні дані у відкритому вигляді;
-- алерти на аномалії.
-
 </details>
 
 ### 5. Які типи вразливостей знаєте? Як від них захищатися?
@@ -362,52 +311,60 @@ OWASP checklist для PHP/Laravel (практичний мінімум):
 <summary>Розкрити:</summary>
 
 **1. SQL Injection**  
-Суть: user input потрапляє в SQL як частина запиту.
-Приклад: логін шукає користувача через конкатенацію рядка SQL.  
-Чому небезпечно: можна обійти авторизацію, витягнути/змінити дані в БД.  
-Захист: тільки prepared statements / ORM, валідація вводу, мінімальні права користувача БД.
+Суть: значення з фронту (user input) потрапляє у SQL як частина запиту.  
+Тоді БД може інтерпретувати введення не як рядок-дані, а як SQL-код.
 
-**Prepared statements** — це коли SQL-запит готується окремо від даних (PDO extension).  
-Тобто структура SQL фіксована, а значення підставляються як параметри.
-
-Навіть якщо хакер вводить:
-
-    ' OR 1=1 --
-
-PDO передає це як **значення**, а не SQL-код:
-
-``` sql
-email = "' OR 1=1 --"
-```
-
-✔ структура запиту незмінна\
-✔ SQL не ламається\
-✔ інʼєкція неможлива
-
+Наприклад, якщо робити конкатенацію:
 
 ```php
-// vulnerable
 $email = $_POST['email'] ?? '';
-$sql = "SELECT * FROM users WHERE email = '$email'";
+$sql = "SELECT * FROM users WHERE email = '$email'"; // vulnerable
 $user = $pdo->query($sql)->fetch();
+```
 
-// safe
+### Рішення для raw PHP (PDO)
+
+- тільки prepared statements (`prepare + execute`)
+- використовувати плейсхолдери `?` або `:name`
+- не конкатенувати user input у SQL-рядок
+
+```php
+$email = $_POST['email'] ?? '';
 $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email');
 $stmt->execute(['email' => $email]);
 $user = $stmt->fetch();
 ```
 
----
+Prepared statements — це коли SQL-запит готується окремо від даних (PDO extension).  
+Тобто структура SQL фіксована, а значення підставляються як параметри.
 
-| Case | Payload | Що стане SQL | Що відбувається | Результат |
-|------|--------|--------------|-----------------|-----------|
-| Login Bypass | `' OR 1=1 --` | `SELECT * FROM users WHERE email = '' OR 1=1 --'` | `1=1` завжди TRUE, `--` коментує решту |  Login без пароля |
-| Login як admin | `' OR email='admin@gmail.com' --` | `SELECT * FROM users WHERE email = '' OR email='admin@gmail.com' --'` | Запит шукає admin |  Авторизація як admin |
-| Всі записи | `' OR 'a'='a` | `SELECT * FROM users WHERE email = '' OR 'a'='a'` | TRUE умова |  Повертаються всі користувачі |
-| UNION Injection | `' UNION SELECT id, password FROM users --` | `SELECT * FROM users WHERE email = '' UNION SELECT id, password FROM users --` | Об’єднання результатів |  Витік даних |
-| Виконання SQL | `'; DROP TABLE users; --` | `SELECT * FROM users WHERE email = ''; DROP TABLE users; --'` | Виконується додатковий SQL | 💀 Видалення таблиці |
+### Рішення для Laravel
 
----
+**ORM (Eloquent)**  
+Eloquent не робить ручну конкатенацію SQL, а формує запит і передає значення окремо як bindings.
+
+```php
+$user = User::where('email', $email)->first();
+```
+
+Під капотом (спрощено):
+- SQL шаблон: `SELECT * FROM users WHERE email = ?`
+- bindings: `[$email]`
+- далі виконується prepared statement, тому input не стає SQL-кодом.
+
+**Query Builder**  
+Query Builder працює так само: збирає SQL окремо і значення окремо (bindings).
+
+```php
+$user = DB::table('users')
+    ->where('email', $email)
+    ->first();
+```
+
+Під капотом (спрощено):
+- SQL шаблон: `SELECT * FROM users WHERE email = ?`
+- bindings: `[$email]`
+- виконання через prepared statement.
 
 **2. XSS (Cross-Site Scripting)**  
 Суть: на сторінці виконується шкідливий JS.  
@@ -459,10 +416,10 @@ echo "<div>" . htmlspecialchars($comment, ENT_QUOTES, 'UTF-8') . "</div>";
 ### ✅ Як захищає CSRF token
 
 Сервер:
-1. Генерує CSRF token і зберігає його у session.
-2. Вставляє token у форму:
+1. Генерує CSRF token і зберігає його у session (bank.com).
+2. Сервер повертає HTML сторінку з вшитим у форму csrf токеном:
    `<input type="hidden" name="csrf" value="ABC123">`
-3. На `POST`-запиті перевіряє token.
+3. Користувач клікає на `Submit` форми й сервер перевіряє csrf токен.
 
 Хакерський сайт не може прочитати цей token, тому підроблений запит відхиляється.
 
