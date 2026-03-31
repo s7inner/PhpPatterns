@@ -459,10 +459,10 @@ echo "<div>" . htmlspecialchars($comment, ENT_QUOTES, 'UTF-8') . "</div>";
 ### ✅ Як захищає CSRF token
 
 Сервер:
-1. Генерує CSRF token і зберігає його у session.
-2. Вставляє token у форму:
+1. Генерує CSRF token і зберігає його у session (bank.com).
+2. Сервер повертає HTML сторінку з вшитим у форму csrf токеном:
    `<input type="hidden" name="csrf" value="ABC123">`
-3. На `POST`-запиті перевіряє token.
+3. Користувач клікає на `Submit` форми й сервер перевіряє csrf токен.
 
 Хакерський сайт не може прочитати цей token, тому підроблений запит відхиляється.
 
