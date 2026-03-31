@@ -343,6 +343,9 @@ Prepared statements — це коли SQL-запит готується окре
 **ORM (Eloquent)**  
 Eloquent не робить ручну конкатенацію SQL, а формує запит і передає значення окремо як bindings.
 
+**Тобто Eloquent вставляє це як літерал, а не частину SQL коду, "грубо кажучи, тип даних !SQL код".
+Для Query Builder аналогічно**
+
 ```php
 $user = User::where('email', $email)->first();
 ```
