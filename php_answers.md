@@ -53,6 +53,70 @@ require __DIR__ . '/vendor/autoload.php';
 
 </details>
 
+### 2. Dependency Injection і Dependency Inversion
+
+<details>
+<summary>Розкрити:</summary>
+
+**Dependency Injection (впровадження залежностей)** — залежність не створюють усередині класу (`new`), а передають ззовні: конструктор, метод або сеттер.
+
+**Dependency Inversion (інверсія залежностей, принцип SOLID-D)** — залежність від **абстракції** (інтерфейс), а не від конкретного класу. Яку саме реалізацію підставити, задають у композиційному корені (у Laravel — зазвичай у `AppServiceProvider::register()` через `bind` / `singleton`).
+
+| | Dependency Injection | Dependency Inversion |
+|---|----------------------|----------------------|
+| Питання | Хто створює залежність? | Від чого залежить тип у коді? |
+| «Так» | Передали в конструктор / метод | У сигнатурі інтерфейс, не конкретний клас |
+
+У Laravel вони часто разом: контролер приймає **інтерфейс** (інверсія), сервіс-контейнер **підставляє реалізацію** (ін’єкція).
+
+**Dependency Injection — погано** (немає injection):
+
+```php
+class OrderController extends Controller
+{
+    public function store(Request $request)
+    {
+        $mailer = new SmtpMailer(); // created inside — not Dependency Injection
+        $mailer->send($request->user());
+    }
+}
+```
+
+**Dependency Injection — добре:**
+
+```php
+class OrderController extends Controller
+{
+    public function __construct(private Mailer $mailer) {}
+
+    public function store(Request $request)
+    {
+        $this->mailer->send($request->user());
+    }
+}
+```
+
+**Dependency Inversion** — залежність від контракту замість конкретного класу:
+
+```php
+// weaker: tied to concrete class
+public function __construct(private SmtpMailer $mailer) {}
+
+// better: depends on abstraction (Dependency Inversion)
+public function __construct(private MailerContract $mailer) {}
+```
+
+```php
+// AppServiceProvider::register() — wire implementation to the contract
+$this->app->bind(MailerContract::class, SmtpMailer::class);
+```
+
+`new` у контролері для сервісів зазвичай порушує **Dependency Injection**; якщо це конкретний клас — часто ще й **Dependency Inversion**. Винятки — прості локальні об’єкти (DTO, value object), де `new` не про інфраструктурну залежність.
+
+**Не плутати з Gang of Four:** Dependency Injection не входить до класичних 23 патернів GoF; Dependency Inversion — це принцип SOLID, а не патерн GoF.
+
+</details>
+
 ## PHP Middle
 
 ### 1. Як передаються змінні (за значенням або за посиланням)?
