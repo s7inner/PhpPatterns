@@ -316,6 +316,158 @@ $log = function (string $message) use ($prefix): void {
 
 </details>
 
+### 7. `final`, `static`, `readonly`
+
+<details>
+<summary>Розкрити:</summary>
+
+#### `final`
+
+- На класі: **ставиться**.
+- На методі: **ставиться**.
+- На проперті: **не ставиться**.
+
+Для чого:
+- фіксує контракт класу/методу;
+- забороняє небажане перевизначення через наслідування.
+
+На класі: не можна `extends`.
+
+```php
+final class PaymentGateway {}
+// class StripeGateway extends PaymentGateway {} // Fatal error
+```
+
+На методі: не можна override в дочірньому класі.
+
+```php
+class BaseController {
+    final public function json(array $data): string {
+        return json_encode($data);
+    }
+}
+```
+
+#### `static`
+
+- На класі: **не ставиться** (`static class` у PHP не існує).
+- На методі: **ставиться**.
+- На проперті: **ставиться**.
+- На анонімній функції: **ставиться** (`static function () {}`).
+
+Для чого:
+- члени класу працюють без створення об'єкта;
+- спільний стан/утиліти на рівні класу;
+- для closure: від'єднати функцію від об'єкта (`$this` недоступний).
+
+На проперті: спільна для всіх екземплярів.
+
+```php
+class Counter {
+    public static int $count = 0;
+}
+Counter::$count++;
+```
+
+На методі: виклик без створення об'єкта.
+
+```php
+class MathHelper {
+    public static function sum(int $a, int $b): int {
+        return $a + $b;
+    }
+}
+MathHelper::sum(2, 3); // 5
+```
+
+`static` на анонімній функції:
+
+```php
+class UserService {
+    public string $prefix = '[LOG] ';
+
+    public function demo(): void {
+        $normal = function (string $msg): void {
+            echo $this->prefix . $msg; // OK: є доступ до $this
+        };
+
+        $static = static function (string $msg): void {
+            // echo $this->prefix . $msg; // Fatal error: $this недоступний
+            echo $msg;
+        };
+    }
+}
+```
+
+Пояснення:
+- звичайна closure у методі може бути прив'язана до `$this`;
+- `static function (...)` не має прив'язки до об'єкта;
+- це зручно, коли closure не повинна залежати від стану інстанса.
+
+#### `readonly` (PHP 8.1+ / 8.2+)
+
+- На класі: **ставиться** (PHP 8.2+).
+- На методі: **не ставиться**.
+- На проперті: **ставиться** (PHP 8.1+).
+
+Для чого:
+- зробити об'єкт незмінним після ініціалізації (immutability);
+- безпечні DTO/Value Objects.
+
+На властивості (8.1+): запис один раз (зазвичай у `__construct`).
+
+```php
+class UserDto {
+    public readonly int $id;
+    public function __construct(int $id) {
+        $this->id = $id;
+    }
+}
+```
+
+На класі (8.2+): усі властивості readonly.
+
+```php
+readonly class Money {
+    public function __construct(
+        public int $amount,
+        public string $currency
+    ) {}
+}
+```
+
+#### `final readonly` (разом)
+
+- На класі: **ставиться разом** (`final readonly class`).
+- На методі: **не ставиться як комбінація** (лише окремо `final`).
+- На проперті: **не ставиться як комбінація** (`readonly` ставиться, `final` для property не використовується).
+
+Що означає:
+- `final` -> клас не можна наслідувати;
+- `readonly` -> після ініціалізації властивості не можна змінювати;
+- разом -> незмінний клас із зафіксованим контрактом.
+
+Де використовувати:
+- DTO між шарами (Controller -> Service -> Repository);
+- Value Objects (`Email`, `Money`, `Uuid`);
+- події/команди, де дані не мають мутуватись після створення.
+
+```php
+final readonly class CreateUserCommand {
+    public function __construct(
+        public string $name,
+        public string $email
+    ) {}
+}
+```
+
+Для чого:
+- захист від випадкових змін стану;
+- прозора модель даних;
+- менше багів у бізнес-логіці та тестах.
+
+</details>
+
 ## PHP Middle
 
 ### 1. Як передаються змінні (за значенням або за посиланням)?
